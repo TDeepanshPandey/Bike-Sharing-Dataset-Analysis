@@ -1,0 +1,186 @@
+---
+title: "Data Visualization and Analysis: Report"
+author: 
+- "Debanjali Biswas, Deepansh Pandey and Nikhil Acharya"
+- "Computer Science Institute, Univeristy of Bonn"
+bibliography: "/Users/debanjalibiswas/Uni Bonn/2nd sem/Data Analytics/Bike-Sharing-Dataset/Final_Project/bibliography.bibtex"
+date: "July 29,2018"
+output: pdf_document
+fig_caption: yes
+---
+
+## Overview of Dataset
+
+The dataset chosen is the Bike-Sharing-Dataset [@DataSet]. Bike sharing systems are new generation of traditional bike rentals where whole process from membership, rental and return 
+back has become automatic. Through these systems, user is able to easily rent a bike from a particular position and return 
+back at another position. Currently, there are about over 500 bike-sharing programs around the world which is composed of 
+over 500 thousands bicycles. Today, there exists great interest in these systems due to their important role in traffic, 
+environmental and health issues. 
+
+Bike-sharing rental process is highly correlated to the environmental and seasonal settings. For instance, weather conditions, precipitation, day of week, season, hour of the day, etc. can affect the rental behaviors.
+
+## Idea
+To find the yearly sales of Bikes rented based on different factors which include weather conditions and type of users.
+
+## Aproach
+The daily records of the sales of bikes was loaded into a dataframe and was preprocessedin order to match the appropriate format for invidual attributes which was later used for plots and linear modeling. Pipeline functions from R was used mainly preprocessing and subsetting of data. Each of the subsets of the dataframe was used to create plots and the results were used to visualize the effect of these factors mentioned. The individual attrbutes were compared with the sales of bikes using Karl Pearson's co-effecient. Attributes with low correlation co-effecients were ignored. 
+
+For predicting the sale of bikes for a given day, Linear Modeling was used. The results of the summary functions which include standard error, t-value, p-value and F-statistics, were used to choose the best attributes for the model. We also implemented a Linear Model and forecasted the result for Time Series Analysis.
+
+## Understanding the Dataset
+The following is a list of the attributes from the dataset:
+```{r, echo=FALSE}
+day_data <- read.csv('day.csv') # Reading the Dataset
+names(day_data) # Prnting the attributes of the Dataset
+```
+
+## Bike Rental Trend
+The trends (as shown in the Figure 1) below are depicts in that the count of Bike rentals increased in the month of March. It is also seen that this count increases with year.
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2) # for data visulisation
+library(plotly) # for plot rendering
+library(dplyr) # for select statement
+library(grid)
+library(gridExtra)
+library(date) # for handling dates
+library(lubridate)
+library(pacman)
+library(forecast)
+library(tidyr)
+```
+
+```{r fig1, fig.height=3, fig.align='center', fig.width=8, echo=FALSE, fig.cap='Monthly Bike Rental Trend'}
+# Generates the Rental Trend
+ggplot(data=day_data, aes(x=as.factor(mnth), y=cnt, fill= as.factor(year(dteday)))) + 
+  geom_bar(stat="identity", position=position_dodge())+
+  labs( x= "Month", y="Rental Count", fill= "Year") +
+  scale_x_discrete(labels=month.abb) 
+
+```
+
+
+## Analysis of the Bike Rental count with respect to different factors of Weather
+The different correlation co-effecients of the count of Bike Rentals with respect to each of the factors are as follows:
+```{r, echo=FALSE}
+print("With Humidity:")
+cor(day_data$hum,day_data$cnt)
+print("With Temperature:")
+cor(day_data$cnt,day_data$temp)
+print("With Real Feel Temperature:")
+cor(day_data$cnt,day_data$atemp)
+print("With Windspeed:")
+cor(day_data$cnt,day_data$windspeed)
+```
+
+The real feel temperature largely influences the count of Bike rentals as it has the largest correlartion co-effecient.These effects are futher demonstrated in Figure 2.
+
+```{r fig2, echo=FALSE, fig.height=4, fig.align='center', fig.width=8, fig.cap='Effect of different factors: Humidity,Temperature, Real feel Temperature, Windspeed'}
+# Effect of Humidity on Bicycle Rentals
+f1 <- ggplot(data=day_data, aes(x=hum, y=cnt)) +geom_point(size=0.00001)+ labs(x= "Humidity", y="Rental Count")  +scale_x_continuous(breaks=c(0,0.5,1))
+
+#Effect of Temperature on Bike sales
+f2 <- ggplot(data=day_data, aes(x=temp, y=cnt)) +geom_point(size=0.00001)+ labs(x= "Temperature", y="Rental Count")  +scale_x_continuous(breaks=c(0,0.5,1)) + geom_smooth(method='lm')
+
+#Effect of Real feelTemperature on Bike sales
+f3 <- ggplot(data=day_data, aes(x=atemp, y=cnt)) +geom_point(size=0.00001)+ labs(x= "Real feel Temperature", y="Rental Count")  +scale_x_continuous(breaks=c(0,0.5,1)) + geom_smooth(method='lm')
+
+#Effect of windspeed on count of sales
+f4 <- ggplot(data=day_data, aes(x=windspeed, y=cnt)) +geom_point(size=0.00001)+ labs(x= "Windspeed", y="Rental Count")  +scale_x_continuous(breaks=c(0,0.5,1)) + geom_smooth(method='lm')
+grid.arrange(f1, f2, f3, f4, ncol=2, nrow=2)
+```
+
+## Analysis with respect to Other Weather Conditions
+The count of Bike Rentals are the maximum when the sky is clear and the minimum when it is snowing or raining (as seen in Figure 3)
+
+```{r fig3,echo=FALSE, fig.align='left', fig.width=6, fig.height=2, fig.cap='Effect of weather on rentals'}
+stacked_plot_data = day_data %>% select(holiday,weekday,cnt,casual,registered,weathersit) %>%  
+  mutate(public_holiday = ifelse(holiday == 0 ,"Non-Working Day", "Working Day"))
+stacked_plot_data = stacked_plot_data %>% select(holiday,weekday,cnt,casual,registered,weathersit, public_holiday) %>% mutate(weather = case_when(weathersit==1 ~ "Clear" , weathersit==2 ~ "Mild" ,  weathersit==3 ~ "Snow/Rain"))
+
+#Effect of weather on sales
+ggplot(stacked_plot_data, aes(x = weather, y = cnt)) +
+  geom_bar(stat = "identity") + scale_y_continuous(labels = scales::comma) + labs(x= "Weather Condition", y="Rental Count")
+```
+```{r fig4,echo=FALSE, fig.height=2, fig.align='right', fig.width=6, fig.cap='Rental Count per day of the week'}
+#sales per day of the week based on holidays
+ggplot() + geom_bar(aes(y = cnt, x = as.factor(weekday), fill = as.factor(public_holiday)), data = stacked_plot_data,stat="identity",position=position_dodge()) + labs( x= "Day", y="Rental Count" , fill="Holiday") + scale_y_continuous(labels = scales::comma)+ scale_x_discrete(labels= c("Sun", "Mon", "Tues", "Wed", "Thurs", "Fri", "Sat"))
+
+```
+## Analysis with respect to Casual and Registered users
+The number of casual users renting is more during the weekends where the number of registered users renting is more during the weekdays (as in Figure 5). We also observe that count of rentals are more on Non-Working Days than Working Days. (Figure 4)
+
+```{r fig5, echo=FALSE,fig.height=2, fig.align='center', fig.width=8, fig.cap='Effect of day on different users: Casual, Registered'}
+
+#Count of casual users per day of the week
+f1 <- ggplot(stacked_plot_data, aes(x = as.factor(weekday), y = casual, group=1))+ scale_x_discrete(labels= c("Sun", "Mon", "Tues", "Wed", "Thurs", "Fri", "Sat"))+ 
+  geom_bar(stat = "identity") + scale_y_continuous(labels = scales::comma)+ labs(x= "Day", y="Casual Users Count")
+
+#Count of registered users per day of the week
+f2 <- ggplot(stacked_plot_data, aes(x = as.factor(weekday), y = registered, group=1)) + scale_x_discrete(labels= c("Sun", "Mon", "Tues", "Wed", "Thurs", "Fri", "Sat"))+
+  geom_bar(stat = "identity") + scale_y_continuous(labels = scales::comma) + labs(x= "Day", y="Registered Users Count")
+
+grid.arrange(f1, f2, ncol=2)
+```
+
+## Linaer Modeling
+Linear modelling is done using the best parameters: real feel temperature, humidity, windspeed, season and weather. Summary of the model and the predicted value are shown below:
+
+```{r,echo=FALSE}
+#Linear modelling using best parameters real feel temperature, humidity, windspeed,season and weather. Explain why its a good fit
+model <-lm(cnt~atemp+hum+windspeed+season+weathersit,data= day_data)
+test_data = data.frame(atemp=0.165,hum=0.3,windspeed=0.4,season=1,weathersit=1)
+summary(model)
+#predict(model,test_data)
+
+```
+
+## Time Series Analysis
+We are plotting the total count of bikes for various month. Implementing a linear model using lag function to do prediction and forecasting for out data. 
+
+```{r,fig8,echo=FALSE, fig.height=2, fig.align='center', fig.width=8, fig.cap='Prediction by Linear Model'}
+
+# We estimate the AR model using Linear Regression
+# Here you can add something more about linear model
+# Our dependent and independent variable
+timeseries_model <- lm(cnt ~ lag(cnt) + 
+              lag(cnt,2) +
+              lag(cnt,3) +
+              lag(cnt,4) +
+              lag(cnt,5), data = day_data)
+
+# We check for the standard error
+# You can also describe other things just run the below line
+#summary(timeseries_model)
+#Here we are outputting our model predicted value and real values
+day_data %>% transmute(dteday,cnt,prediction = c(0,0,0,0,0, predict(timeseries_model))) %>%
+  gather("Type","Value",-dteday) %>%
+  ggplot(aes(x = dteday, y = Value, color = Type)) + 
+  labs(x='Date')+
+  geom_point()
+```
+```{r,fig9,echo=FALSE, fig.height=3, fig.align='center', fig.width=8, fig.cap='Basic Forecasting'}
+
+# we extract the seasonal effect and do basic forecasting
+count <- day_data$cnt %>%
+  ts(frequency = 365) %>%
+  stl("periodic")
+
+# here we use autoplot function 
+# you can google more about these components of timeseries:
+# 1.  Seasonality is the presence of variations that occur at specific regular intervals less than a year, such as weekly, monthly, or quarterly.
+# 2.  Trend is the component of a time series that represents variations of low frequency in a time series, the high and medium frequency fluctuations having been filtered out.
+# 3.  Remainder irregular component (or "noise") at time t, which describes random, irregular influences. It represents the residuals or remainder of the time series after the other components have been removed.
+# Write the graph outcomes
+#autoplot(count)
+# Here we make a basic forcasting
+plot(forecast(count)) 
+
+```
+
+## Conclusion
+Humidity, Windspeed, Real feel Temperature, Seasons, other Weather conditions like snowfall, rain, etc. heavly influences the count of Bike rentals. The real feel temperature largely influences the count of Bike rentals as it has the largest correlartion co-effecient. Registered Users tend to use the bikes more on weekdays than weekends and non-working days while the casual users use it on the non-working days. 
+
+## References
+
+
