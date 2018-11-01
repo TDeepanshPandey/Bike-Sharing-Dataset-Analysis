@@ -30,7 +30,7 @@ For predicting the sale of bikes for a given day, Linear Modeling was used. The 
 ## Understanding the Dataset
 The following is a list of the attributes from the dataset:
 ```{r, echo=FALSE}
-day_data <- read.csv('day.csv') # Reading the Dataset
+day_data <- read.csv('Bike-Sharing-Dataset/day.csv') # Reading the Dataset
 names(day_data) # Prnting the attributes of the Dataset
 ```
 
