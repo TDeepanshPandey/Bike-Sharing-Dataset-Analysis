@@ -8,7 +8,7 @@ Bike-sharing rental process is highly correlated to the environmental and season
 ## Idea
 To find the yearly sales of Bikes rented based on different factors which include weather conditions and type of users.
 
-Project Report - http://deepanshpandey.in/pdf/Bike_Dataset_Report.pdf
+Project Report - [Available on my personal website](https://deepanshpandey.com/pdf/Bike_Dataset_Report.pdf)
 
 ![alt_text](https://github.com/TDP4you/Bike-Sharing-Dataset-Analysis/blob/master/Screenshot_Bike_Sharing_Dataset.png)
 
